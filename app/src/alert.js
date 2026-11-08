@@ -1,16 +1,18 @@
 const q = new URLSearchParams(location.search);
 const kind = q.get('kind') || 'idle';
+const danger = kind === 'idle' || kind === 'asleep'; // red card + siren, stays until dismissed
 const $ = id => document.getElementById(id);
 
 const ICONS = {
   idle: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
   offline: '<path d="M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.3-1.6M12 20h.01"/>',
   back: '<path d="M20 6 9 17l-5-5"/>',
+  asleep: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
 };
-const LABELS = { idle: 'Idle alert', offline: 'Offline', back: 'Active again' };
+const LABELS = { idle: 'Idle alert', asleep: 'Sleep alert', offline: 'Offline', back: 'Active again' };
 const AUTO_CLOSE_MS = 8000; // idle alerts stay until dismissed
 
-$('card').classList.add(kind);
+$('card').classList.add(danger ? 'idle' : kind); // 'asleep' uses the same red danger style
 $('icon').innerHTML = ICONS[kind] || ICONS.idle;
 $('kind').textContent = LABELS[kind] || 'Alert';
 $('time').textContent = new Date(Number(q.get('at')) || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -30,7 +32,7 @@ $('close').onclick = close;
 $('view').onclick = () => { window.api.popupView(); close(); };
 $('mute').onclick = () => { stopSound(); $('mute').classList.add('hidden'); };
 
-if (kind !== 'idle') {
+if (!danger) {
   $('timer').style.animation = `drain ${AUTO_CLOSE_MS}ms linear forwards`;
   setTimeout(close, AUTO_CLOSE_MS);
 }
@@ -64,11 +66,11 @@ function playSound(kind) {
     ctx.master = master;
     const t0 = ctx.currentTime + 0.05;
     let end;
-    if (kind === 'idle') end = siren(ctx, master, t0);
+    if (danger) end = siren(ctx, master, t0);
     else if (kind === 'offline') end = warningBeeps(ctx, master, t0);
     else end = chime(ctx, master, t0);
 
-    if (kind === 'idle') {
+    if (danger) {
       $('mute').classList.remove('hidden');
       $('mute').classList.add('sounding');
     }

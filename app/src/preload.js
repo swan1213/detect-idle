@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   addProject: opts => ipcRenderer.invoke('add-project', opts),
   removeProject: id => ipcRenderer.invoke('remove-project', id),
   reset: () => ipcRenderer.invoke('reset'),
+  presenceConfirm: () => ipcRenderer.invoke('presence-confirm'),
 
   // client
   setThreshold: minutes => ipcRenderer.invoke('set-threshold', minutes),

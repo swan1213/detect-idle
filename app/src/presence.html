@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>Still there?</title>
+  <link rel="stylesheet" href="presence.css">
+</head>
+<body>
+  <div id="card" class="card">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v1M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+    </div>
+    <div class="body">
+      <div class="title">Still there?</div>
+      <div class="text">Your input looks automatic (a key held down?). Move the mouse or click to confirm.</div>
+    </div>
+    <button id="here" class="btn">I'm here</button>
+    <div id="timer" class="timer"></div>
+  </div>
+  <script src="presence.js"></script>
+</body>
+</html>

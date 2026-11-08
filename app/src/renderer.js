@@ -3,12 +3,13 @@ let current = null;
 let lastAlertAt = 0;
 
 const RING_C = 2 * Math.PI * 88; // ring circumference (r=88)
-const STATUS_LABEL = { active: 'Active', idle: 'Idle', offline: 'Offline', paused: 'Paused' };
+const STATUS_LABEL = { active: 'Active', idle: 'Idle', offline: 'Offline', paused: 'Paused', asleep: 'Possibly asleep' };
 
 const ICONS = {
   idle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
   offline: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.3-1.6M12 20h.01"/></svg>',
   back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  asleep: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
 };
 
 // ---------- helpers ----------
@@ -96,6 +97,7 @@ function render(s) {
 // level for one client: off (not monitoring) / ok / warn / danger
 function clientLevel(c, idle) {
   if (!c.connected || !c.monitoring) return 'off';
+  if (current && current.presence === 'failed') return 'danger'; // no answer to the presence check
   const limit = (c.thresholdMinutes || 0) * 60;
   if (!limit) return 'ok';
   const r = idle / limit;
@@ -197,9 +199,20 @@ function renderFreelancer(s) {
   if (!monitored) {
     $('heroTitle').textContent = 'Not monitored right now';
     $('heroSub').textContent = s.projects.length ? 'Your clients turn monitoring on and off.' : 'Join a project to get started.';
+  } else if (s.presence === 'failed') {
+    $('heroTitle').textContent = 'No response — clients notified';
+    $('heroSub').textContent = 'Move the mouse or type to continue.';
+  } else if (s.presence === 'pending') {
+    $('heroTitle').textContent = 'Still there?';
+    $('heroSub').textContent = 'Move the mouse or click "I\'m here" in the corner.';
   } else if (notified.length) {
     $('heroTitle').textContent = 'Idle — clients notified';
     $('heroSub').textContent = `Notified: ${uniq(notified).join(', ')}`;
+  } else if (s.suspicious) {
+    $('heroTitle').textContent = 'Input looks automatic';
+    $('heroSub').textContent = s.fakeReason === 'mouse-jitter'
+      ? 'Tiny mouse twitches don\'t count as activity.'
+      : 'A key held down doesn\'t count as activity.';
   } else {
     const n = uniq(watching).length;
     $('heroTitle').textContent = `Monitored by ${n} client${n > 1 ? 's' : ''}`;
@@ -257,7 +270,7 @@ function renderClient(s) {
   for (const [name, el] of cards) if (!names.has(name)) { el.remove(); cards.delete(name); }
 
   let nActive = 0, nIdle = 0, nOffline = 0;
-  const idleNames = [];
+  const idleNames = [], asleepNames = [];
   for (const f of s.freelancers) {
     let el = cards.get(f.name);
     if (!el) { el = buildCard(f); cards.set(f.name, el); grid.append(el); }
@@ -265,7 +278,7 @@ function renderClient(s) {
     const ratio = Math.min(idle / limit, 1);
     const tracked = f.monitored && f.online;
 
-    el.classList.toggle('is-idle', f.status === 'idle');
+    el.classList.toggle('is-idle', f.status === 'idle' || f.status === 'asleep');
     el.classList.toggle('is-offline', f.status === 'offline');
     el.classList.toggle('is-not-working', f.status === 'paused');
     const badge = el.querySelector('.badge');
@@ -279,7 +292,8 @@ function renderClient(s) {
     el.querySelector('.switch').classList.toggle('on', f.monitored);
 
     if (f.status === 'active') nActive++;
-    if (f.status === 'idle') { nIdle++; idleNames.push(f.name); }
+    if (f.status === 'idle' || f.status === 'asleep') { nIdle++; idleNames.push(f.name); }
+    if (f.status === 'asleep') asleepNames.push(f.name);
     if (f.status === 'offline') nOffline++;
   }
   $('nActive').textContent = nActive;
@@ -292,16 +306,22 @@ function renderClient(s) {
   const banner = $('dangerBanner');
   banner.classList.toggle('hidden', nIdle === 0);
   if (nIdle) {
-    $('dangerTitle').textContent = nIdle === 1 ? 'Idle alert' : `${nIdle} freelancers idle`;
-    $('dangerText').textContent = nIdle === 1
-      ? `${idleNames[0]} has had no keyboard or mouse activity for more than ${s.thresholdMinutes} min.`
-      : `${idleNames.join(', ')} have been idle for more than ${s.thresholdMinutes} min.`;
+    if (nIdle === 1 && asleepNames.length === 1) {
+      $('dangerTitle').textContent = 'Possibly asleep';
+      $('dangerText').textContent = `${asleepNames[0]}'s input looks automatic (e.g. a key held down) and there was no answer to the presence check.`;
+    } else if (nIdle === 1) {
+      $('dangerTitle').textContent = 'Idle alert';
+      $('dangerText').textContent = `${idleNames[0]} has had no real keyboard or mouse activity for more than ${s.thresholdMinutes} min.`;
+    } else {
+      $('dangerTitle').textContent = `${nIdle} freelancers need attention`;
+      $('dangerText').textContent = `${idleNames.join(', ')}: idle or possibly asleep.`;
+    }
   }
 
   // new idle alert -> shake banner + row
   const newest = s.alerts[0];
   if (newest && newest.at > lastAlertAt) {
-    if (lastAlertAt && newest.kind === 'idle') {
+    if (lastAlertAt && (newest.kind === 'idle' || newest.kind === 'asleep')) {
       restartAnim(banner, 'shake');
       const card = cards.get(newest.name);
       if (card) restartAnim(card, 'shake');

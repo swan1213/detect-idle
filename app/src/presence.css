@@ -1,0 +1,52 @@
+/* Small, calm, non-blocking presence check (freelancer side). */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; }
+body { padding: 10px; font: 12px/1.4 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; color: #e8edf7; }
+
+.card {
+  position: relative; overflow: hidden;
+  height: 100%; display: flex; align-items: center; gap: 11px;
+  padding: 12px 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(30, 41, 66, 0.97), rgba(15, 21, 37, 0.97));
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  animation: in .4s cubic-bezier(.2, .9, .3, 1.1) both;
+}
+.card.out { animation: out .25s ease-in both; }
+
+.icon {
+  width: 34px; height: 34px; flex: none; border-radius: 10px;
+  display: grid; place-items: center;
+  color: #fbbf24; background: rgba(245, 158, 11, 0.15);
+}
+.icon svg { width: 19px; height: 19px; animation: wave 1.8s ease-in-out infinite; transform-origin: 70% 80%; }
+.body { flex: 1; min-width: 0; }
+.title { font: 600 13px "Segoe UI Variable Display", "Segoe UI", sans-serif; }
+.text { font-size: 11px; color: #a7b2c7; line-height: 1.35; }
+
+.btn {
+  flex: none; font: 600 12px "Segoe UI", sans-serif; color: #fff; cursor: pointer;
+  padding: 7px 12px; border: none; border-radius: 8px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 6px 14px -6px rgba(16, 185, 129, 0.8);
+  transition: filter .15s, transform .1s;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:active { transform: scale(0.96); }
+
+.timer { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: #fbbf24; transform-origin: left; }
+
+@keyframes in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes out { to { opacity: 0; transform: translateY(16px); } }
+@keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 15% { transform: rotate(14deg); } 30% { transform: rotate(-8deg); } 45% { transform: rotate(10deg); } }
+@keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+@media (prefers-color-scheme: light) {
+  body { color: #0f172a; }
+  .card { background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(243, 245, 250, 0.98)); border-color: #e4e7f0; box-shadow: 0 10px 28px -10px rgba(15, 23, 42, 0.3); }
+  .text { color: #64748b; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}

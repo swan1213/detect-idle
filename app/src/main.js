@@ -13,6 +13,7 @@ const crypto = require('crypto');
 const WebSocket = require('ws');
 const { createHub, WS_PORT } = require('./hub');
 const { findClients } = require('./discover');
+const { ActivityTracker } = require('./activity');
 
 // ---------- role ----------
 const roleArg = (process.argv.find(a => a.startsWith('--role=')) || '').slice(7);
@@ -88,6 +89,10 @@ function publicState() {
     setupDone: !!config.name,
     name: config.name || '',
     projects: [...projects.values()].map(p => p.view()),
+    presence,
+    suspicious: suspiciousNow(),
+    fakeReason: tracker.fakeReason,
+    smartDetection: hookOk,
   };
 }
 
@@ -150,7 +155,7 @@ function notify(alert) {
   layoutPopups();
 
   // Flash the taskbar button for danger alerts.
-  if (alert.kind === 'idle' && win && !win.isDestroyed()) win.flashFrame(true);
+  if ((alert.kind === 'idle' || alert.kind === 'asleep') && win && !win.isDestroyed()) win.flashFrame(true);
 }
 
 // =====================================================================
@@ -209,8 +214,99 @@ const projects = new Map(); // project id -> Project
 let heartbeatTimer = null;
 
 const withPort = host => (/:\d+$/.test(host) ? host : `${host}:${WS_PORT}`);
-// Seconds since the last keyboard/mouse input anywhere in Windows (GetLastInputInfo).
-const idleNow = () => powerMonitor.getSystemIdleTime();
+
+// ----- real vs automatic activity (see activity.js) -----
+// Dev only: --presence-after=S / --presence-timeout=S shorten these for testing.
+const devNum = name => !app.isPackaged && Number((process.argv.find(a => a.startsWith(`--${name}=`)) || '').split('=')[1]);
+const PRESENCE_AFTER_S = devNum('presence-after') || 120;   // automatic-looking input for 2 min -> presence check
+const PRESENCE_TIMEOUT_S = devNum('presence-timeout') || 60; // seconds the freelancer has to respond
+const tracker = new ActivityTracker();
+let hookOk = false;
+let uIOhook = null;
+let presence = 'none'; // none | pending | failed
+let presenceStart = 0;
+let presenceWin = null;
+
+function startInputHook() {
+  try {
+    ({ uIOhook } = require('uiohook-napi'));
+    uIOhook.on('keydown', e => tracker.keyDown(e.keycode));
+    uIOhook.on('keyup', e => tracker.keyUp(e.keycode));
+    // Dev only: --test-ignore-mouse lets automated tests run while someone uses the PC's mouse.
+    if (app.isPackaged || !process.argv.includes('--test-ignore-mouse')) {
+      uIOhook.on('mousemove', e => tracker.mouseMove(e.x, e.y));
+      uIOhook.on('mousedown', () => tracker.click());
+      uIOhook.on('wheel', () => tracker.wheel());
+    }
+    uIOhook.start();
+    hookOk = true;
+  } catch (err) {
+    // Fall back to plain Windows idle time if the hook can't load.
+    console.error('Input hook unavailable, using basic idle detection:', err.message);
+    hookOk = false;
+  }
+}
+
+// Idle seconds = time since the last REAL activity. Without the hook: plain Windows idle time
+// (seconds since any keyboard/mouse input, GetLastInputInfo).
+function idleNow() {
+  const os = powerMonitor.getSystemIdleTime();
+  return hookOk ? Math.max(os, Math.floor(tracker.idleSeconds())) : os;
+}
+
+const suspiciousNow = () => hookOk && tracker.suspiciousSeconds() > 0;
+const anyoneMonitoring = () => allLinks().some(l => l.connected && l.monitoring);
+
+function openPresenceCheck() {
+  if (presenceWin && !presenceWin.isDestroyed()) return;
+  const W = 380, H = 100;
+  const { workArea } = screen.getPrimaryDisplay();
+  presenceWin = new BrowserWindow({
+    width: W, height: H,
+    x: workArea.x + workArea.width - W - 8,
+    y: workArea.y + workArea.height - H - 8,
+    frame: false, transparent: true, resizable: false, movable: false,
+    minimizable: false, maximizable: false, skipTaskbar: true,
+    alwaysOnTop: true, show: false, hasShadow: false,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+  });
+  presenceWin.setAlwaysOnTop(true, 'screen-saver');
+  presenceWin.loadFile(path.join(__dirname, 'presence.html'), { query: { seconds: String(PRESENCE_TIMEOUT_S) } });
+  presenceWin.once('ready-to-show', () => presenceWin?.showInactive()); // never steals focus
+  presenceWin.on('closed', () => { presenceWin = null; });
+}
+
+function closePresenceCheck() {
+  if (presenceWin && !presenceWin.isDestroyed()) presenceWin.destroy();
+  presenceWin = null;
+}
+
+function setPresence(next) {
+  if (presence === next) return;
+  presence = next;
+  const idle = idleNow();
+  for (const l of allLinks()) l.sendStatus(idle); // tell clients right away
+  pushState();
+}
+
+// Runs every second (freelancer).
+function presenceTick() {
+  if (!hookOk) return;
+  if (presence === 'none') {
+    if (anyoneMonitoring() && tracker.suspiciousSeconds() >= PRESENCE_AFTER_S) {
+      presenceStart = Date.now();
+      openPresenceCheck();
+      setPresence('pending');
+    }
+  } else if (tracker.lastReal > presenceStart || !anyoneMonitoring()) {
+    // Real mouse movement, typing or the "I'm here" button -> present (or nobody is monitoring).
+    closePresenceCheck();
+    setPresence('none');
+  } else if (presence === 'pending' && Date.now() - presenceStart > PRESENCE_TIMEOUT_S * 1000) {
+    closePresenceCheck();
+    setPresence('failed'); // clients get the "possibly asleep" alert
+  }
+}
 
 // One connection to one Client app.
 class Link {
@@ -235,7 +331,7 @@ class Link {
   }
 
   sendStatus(idleSeconds = idleNow()) {
-    this.send({ type: 'status', idleSeconds });
+    this.send({ type: 'status', idleSeconds, asleep: presence === 'failed', suspicious: suspiciousNow() });
   }
 
   dropSocket() {
@@ -425,8 +521,11 @@ function startFreelancer() {
     for (const l of allLinks()) l.sendStatus(idle);
   }, HEARTBEAT_MS);
 
-  // Refresh the on-screen idle timer every second (sent to clients every 10s).
+  startInputHook();
+
+  // Every second: presence check + refresh the on-screen idle timer (sent to clients every 10s).
   setInterval(() => {
+    presenceTick();
     state.idleSeconds = idleNow();
     if (win && !win.isDestroyed() && win.isVisible()) win.webContents.send('state', publicState());
   }, 1000);
@@ -500,6 +599,10 @@ ipcMain.handle('setup', (_e, opts) => {
 });
 ipcMain.handle('add-project', (_e, opts) => (ROLE === 'freelancer' ? addProject(opts) : { error: 'Not a freelancer app.' }));
 ipcMain.handle('remove-project', (_e, id) => removeProject(id));
+ipcMain.handle('presence-confirm', () => {
+  tracker.confirmPresence();
+  presenceTick(); // closes the card and clears the state right away
+});
 ipcMain.handle('reset', () => {
   if (ROLE !== 'freelancer') return;
   for (const p of projects.values()) p.close();
@@ -584,6 +687,10 @@ if (!app.requestSingleInstanceLock()) {
     powerMonitor.on('resume', () => { for (const p of projects.values()) p.reconnectAll(); });
   });
 
-  app.on('before-quit', () => { quitting = true; hub?.close(); });
+  app.on('before-quit', () => {
+    quitting = true;
+    hub?.close();
+    try { uIOhook?.stop(); } catch {}
+  });
   app.on('window-all-closed', () => { /* keep running in tray */ });
 }

@@ -31,7 +31,7 @@ function createHub({
 
   const list = () => [...freelancers.values()].map(f => ({
     name: f.name, online: f.online, monitored: isMonitored(f.name),
-    idleSeconds: f.idleSeconds, status: f.status, lastSeen: f.lastSeen,
+    idleSeconds: f.idleSeconds, status: f.status, lastSeen: f.lastSeen, suspicious: !!f.suspicious,
   }));
   const pushList = () => onList(list());
 
@@ -41,17 +41,20 @@ function createHub({
     let status;
     if (!isMonitored(f.name)) status = 'paused';
     else if (!f.online || Date.now() - f.lastSeen > OFFLINE_AFTER_MS) status = 'offline';
+    else if (f.asleep) status = 'asleep'; // input looked automatic and the presence check got no answer
     else if (f.idleSeconds >= limit) status = 'idle';
     else status = 'active';
 
     if (status === f.status) return false;
     const prev = f.status;
     f.status = status;
-    if (status === 'idle') {
+    if (status === 'asleep') {
+      onAlert({ kind: 'asleep', name: f.name, text: `${f.name} may be asleep: input looks automatic and no answer to "Still there?".` });
+    } else if (status === 'idle') {
       onAlert({ kind: 'idle', name: f.name, text: `${f.name} has been idle for ${Math.floor(f.idleSeconds / 60)} min (limit ${getThreshold()} min).` });
     } else if (status === 'offline' && prev !== undefined && prev !== 'paused') {
       onAlert({ kind: 'offline', name: f.name, text: `${f.name} went offline (Freelancer app closed or PC disconnected).` });
-    } else if (announceBack && status === 'active' && (prev === 'idle' || prev === 'offline')) {
+    } else if (announceBack && status === 'active' && (prev === 'idle' || prev === 'offline' || prev === 'asleep')) {
       onAlert({ kind: 'back', name: f.name, text: `${f.name} is active again.` });
     }
     return true;
@@ -92,6 +95,8 @@ function createHub({
         const f = freelancers.get(ws.fname);
         if (!f || f.ws !== ws) return;
         f.idleSeconds = Math.max(0, Number(msg.idleSeconds) || 0);
+        f.asleep = !!msg.asleep;          // presence check failed
+        f.suspicious = !!msg.suspicious;  // input currently looks automatic
         f.lastSeen = Date.now();
         f.online = true;
         evaluate(f);

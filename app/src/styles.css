@@ -406,3 +406,8 @@ details .field { margin-top: 8px; }
 .frow .switch::after { width: 15px; height: 15px; }
 .frow .switch.on::after { transform: translateX(17px); }
 .badge.paused { color: var(--muted); background: var(--neutral-soft); }
+
+/* ================= v4: "possibly asleep" (input looked automatic, no answer to presence check) ================= */
+.badge.asleep { color: #fff; background: linear-gradient(135deg, var(--danger), #9333ea); }
+.badge.asleep .bdot { animation: blink .6s infinite; }
+.tl-asleep .tl-icon { background: var(--danger-soft); color: var(--danger); }

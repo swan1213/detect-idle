@@ -16,6 +16,7 @@
     "icons": "electron scripts/make-icons.js"
   },
   "dependencies": {
+    "uiohook-napi": "^1.5.5",
     "ws": "^8.18.0"
   },
   "devDependencies": {
@@ -30,6 +31,10 @@
     "files": [
       "src/**/*",
       "package.json"
+    ],
+    "npmRebuild": false,
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**"
     ],
     "win": {
       "target": "nsis"
