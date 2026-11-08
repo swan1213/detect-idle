@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const WS_PORT = 47800;
 const DISCOVERY_PORT = 47801;
 const OFFLINE_AFTER_MS = 60 * 1000; // no heartbeat for 60s => offline
+const UPDATE_GRACE_MS = 3 * 60 * 1000; // a freelancer restarting to update has 3 min to come back
 const CHECK_EVERY_MS = 5 * 1000;
 
 function createHub({
@@ -40,6 +41,7 @@ function createHub({
     const limit = getThreshold() * 60;
     let status;
     if (!isMonitored(f.name)) status = 'paused';
+    else if ((!f.online || Date.now() - f.lastSeen > OFFLINE_AFTER_MS) && f.updatingUntil > Date.now()) status = 'updating';
     else if (!f.online || Date.now() - f.lastSeen > OFFLINE_AFTER_MS) status = 'offline';
     else if (f.asleep) status = 'asleep'; // input looked automatic and the presence check got no answer
     else if (f.idleSeconds >= limit) status = 'idle';
@@ -82,12 +84,18 @@ function createHub({
           return send(ws, { type: 'error', error: 'Someone with this name is already connected.' });
         }
         const f = existing || { name, idleSeconds: 0 };
-        Object.assign(f, { ws, online: true, lastSeen: Date.now() });
+        Object.assign(f, { ws, online: true, lastSeen: Date.now(), updatingUntil: 0 }); // back (e.g. after an update)
         freelancers.set(name, f);
         ws.fname = name;
         send(ws, { ...configFor(f), type: 'welcome-freelancer' });
         evaluate(f);
         pushList();
+        return;
+      }
+
+      if (msg.type === 'updating' && ws.fname) {
+        const f = freelancers.get(ws.fname);
+        if (f && f.ws === ws) f.updatingUntil = Date.now() + UPDATE_GRACE_MS; // restarting to install an update
         return;
       }
 

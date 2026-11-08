@@ -39,14 +39,32 @@ npm run start:client        # Client app  (dev: --profile=NAME --port=N to run s
 npm run start:freelancer    # Freelancer app (both can run on one PC for testing)
 ```
 
-## Build the installers
+## Build
 
 ```bash
 cd app
 npm run dist
 ```
 
-Output:
+Output in `app/dist/release/`:
 
-- `app/dist/client/Detect Idle Client Setup 1.0.0.exe`
-- `app/dist/freelancer/Detect Idle Freelancer Setup 1.0.0.exe`
+- `Detect-Idle-Client-Setup-<version>.exe` and `Detect-Idle-Freelancer-Setup-<version>.exe` (installers)
+- `Detect-Idle-Client-Portable.exe` and `Detect-Idle-Freelancer-Portable.exe` (no install needed)
+- `client.yml`, `freelancer.yml`, `portable-client.json`, `portable-freelancer.json` (update info)
+
+## Automatic updates
+
+Installed and portable apps check [GitHub Releases](https://github.com/swan1213/detect-idle/releases) shortly after starting and then every 4 hours. When a newer version exists, they download it in the background, check its SHA-512, and restart into the new version on their own (installed: silent reinstall; portable: the `.exe` file is replaced). The Client and Freelancer apps each install only their own update. A Freelancer restarting for an update shows as **Updating…** to its clients instead of triggering an offline alert.
+
+### Publish a new version
+
+1. Raise `"version"` in `app/package.json` (for example `1.0.0` → `1.0.1`).
+2. Sign in to GitHub once: `gh auth login`
+3. Build and publish:
+
+   ```bash
+   cd app
+   npm run release
+   ```
+
+This builds all four apps and creates the GitHub Release `v<version>` with every file from `app/dist/release/`. All running apps pick it up within about 4 hours, or at their next start.

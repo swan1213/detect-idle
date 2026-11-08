@@ -14,6 +14,7 @@ const WebSocket = require('ws');
 const { createHub, WS_PORT } = require('./hub');
 const { findClients } = require('./discover');
 const { ActivityTracker } = require('./activity');
+const { startAutoUpdate } = require('./updater');
 
 // ---------- role ----------
 const roleArg = (process.argv.find(a => a.startsWith('--role=')) || '').slice(7);
@@ -22,8 +23,8 @@ const ROLE = require('../package.json').detectIdleRole
 const APP_TITLE = ROLE === 'client' ? 'Detect Idle - Client' : 'Detect Idle - Freelancer';
 const APP_ID = `com.detectidle.${ROLE}`;
 // Separate settings folder per role, so both apps can run side by side on one PC.
-// Dev only: --profile=name gives a separate settings folder (to test next to an installed copy).
-const profileArg = !app.isPackaged && (process.argv.find(a => a.startsWith('--profile=')) || '').slice(10);
+// --profile=name gives a separate settings folder (to test next to an installed copy, also in built apps).
+const profileArg = (process.argv.find(a => a.startsWith('--profile=')) || '').slice(10);
 app.setPath('userData', path.join(app.getPath('appData'),
   `detect-idle-${ROLE}${profileArg ? '-' + profileArg.replace(/[^\w-]/g, '') : ''}`));
 // Dev only: --port=N runs the Client hub on another port (to test several clients on one PC).
@@ -73,7 +74,7 @@ function localIPs() {
 }
 
 function publicState() {
-  const base = { ...state, role: ROLE, appTitle: APP_TITLE };
+  const base = { ...state, role: ROLE, appTitle: APP_TITLE, appVersion: app.getVersion() };
   if (ROLE === 'client') {
     return {
       ...base,
@@ -678,11 +679,27 @@ if (!app.requestSingleInstanceLock()) {
     tray.on('click', showWindow);
     createWindow();
     // Start with Windows so tracking/alerts keep running.
-    if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true });
+    // Portable copies run from a temporary unpacked folder, so register the portable .exe itself.
+    if (app.isPackaged && !profileArg) { // not for test copies
+      const portableExe = process.env.PORTABLE_EXECUTABLE_FILE;
+      app.setLoginItemSettings(portableExe ? { openAtLogin: true, path: portableExe } : { openAtLogin: true });
+    }
 
     if (ROLE === 'client') startClient();
     else startFreelancer();
     updateTray();
+
+    // Fully automatic updates from GitHub Releases (see updater.js).
+    startAutoUpdate({
+      role: ROLE,
+      onStatus: s => {
+        state.update = s;
+        // Freelancer: tell clients this is an update restart, so they show "Updating…" instead of an offline alert.
+        if (s.status === 'restarting' && ROLE === 'freelancer') for (const l of allLinks()) l.send({ type: 'updating' });
+        pushState();
+      },
+      beforeRestart: () => { quitting = true; },
+    });
 
     powerMonitor.on('resume', () => { for (const p of projects.values()) p.reconnectAll(); });
   });

@@ -9,13 +9,12 @@
     "start": "electron . --role=client",
     "start:client": "electron . --role=client",
     "start:freelancer": "electron . --role=freelancer",
-    "dist": "npm run dist:client && npm run dist:freelancer",
-    "dist:client": "electron-builder --win -c.extraMetadata.detectIdleRole=client -c.appId=com.detectidle.client -c.productName=\"Detect Idle Client\" -c.directories.output=dist/client -c.win.icon=src/assets/icon-client.ico",
-    "dist:freelancer": "electron-builder --win -c.extraMetadata.detectIdleRole=freelancer -c.appId=com.detectidle.freelancer -c.productName=\"Detect Idle Freelancer\" -c.directories.output=dist/freelancer -c.win.icon=src/assets/icon-freelancer.ico",
-    "dist:portable": "electron-builder --win portable -c.extraMetadata.detectIdleRole=client -c.appId=com.detectidle.client -c.productName=\"Detect Idle Client\" -c.directories.output=dist/portable-client -c.win.icon=src/assets/icon-client.ico && electron-builder --win portable -c.extraMetadata.detectIdleRole=freelancer -c.appId=com.detectidle.freelancer -c.productName=\"Detect Idle Freelancer\" -c.directories.output=dist/portable-freelancer -c.win.icon=src/assets/icon-freelancer.ico",
+    "dist": "node scripts/build.js",
+    "release": "node scripts/build.js --release",
     "icons": "electron scripts/make-icons.js"
   },
   "dependencies": {
+    "electron-updater": "^6.8.11",
     "uiohook-napi": "^1.5.5",
     "ws": "^8.18.0"
   },

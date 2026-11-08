@@ -3,7 +3,7 @@ let current = null;
 let lastAlertAt = 0;
 
 const RING_C = 2 * Math.PI * 88; // ring circumference (r=88)
-const STATUS_LABEL = { active: 'Active', idle: 'Idle', offline: 'Offline', paused: 'Paused', asleep: 'Possibly asleep' };
+const STATUS_LABEL = { active: 'Active', idle: 'Idle', offline: 'Offline', paused: 'Paused', asleep: 'Possibly asleep', updating: 'Updating…' };
 
 const ICONS = {
   idle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
@@ -81,6 +81,16 @@ function render(s) {
 
   $('errorText').textContent = s.error || '';
   $('error').classList.toggle('hidden', !s.error);
+
+  // auto-update
+  const u = s.update;
+  $('updateBar').classList.toggle('hidden', !u);
+  if (u) {
+    $('updateBar').className = 'update-bar' + (u.status === 'restarting' ? ' restarting' : '');
+    $('updateText').textContent = u.status === 'restarting' ? `Restarting to update to v${u.version}…`
+      : u.status === 'ready' ? `Update v${u.version} downloaded` : `Downloading update v${u.version}…`;
+  }
+  $('appVersion').textContent = s.appVersion ? `v${s.appVersion}` : '';
 
   $('setup').classList.toggle('hidden', !isF || s.setupDone);
   $('freelancer').classList.toggle('hidden', !isF || !s.setupDone);
