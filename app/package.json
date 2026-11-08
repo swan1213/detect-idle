@@ -10,9 +10,9 @@
     "start:client": "electron . --role=client",
     "start:freelancer": "electron . --role=freelancer",
     "dist": "npm run dist:client && npm run dist:freelancer",
-    "dist:client": "electron-builder --win -c.extraMetadata.detectIdleRole=client -c.appId=com.detectidle.client -c.productName=\"Detect Idle Client\" -c.directories.output=dist/client -c.win.icon=build/icon-client.ico",
-    "dist:freelancer": "electron-builder --win -c.extraMetadata.detectIdleRole=freelancer -c.appId=com.detectidle.freelancer -c.productName=\"Detect Idle Freelancer\" -c.directories.output=dist/freelancer -c.win.icon=build/icon-freelancer.ico",
-    "dist:portable": "electron-builder --win portable -c.extraMetadata.detectIdleRole=client -c.appId=com.detectidle.client -c.productName=\"Detect Idle Client\" -c.directories.output=dist/portable-client -c.win.icon=build/icon-client.ico && electron-builder --win portable -c.extraMetadata.detectIdleRole=freelancer -c.appId=com.detectidle.freelancer -c.productName=\"Detect Idle Freelancer\" -c.directories.output=dist/portable-freelancer -c.win.icon=build/icon-freelancer.ico",
+    "dist:client": "electron-builder --win -c.extraMetadata.detectIdleRole=client -c.appId=com.detectidle.client -c.productName=\"Detect Idle Client\" -c.directories.output=dist/client -c.win.icon=src/assets/icon-client.ico",
+    "dist:freelancer": "electron-builder --win -c.extraMetadata.detectIdleRole=freelancer -c.appId=com.detectidle.freelancer -c.productName=\"Detect Idle Freelancer\" -c.directories.output=dist/freelancer -c.win.icon=src/assets/icon-freelancer.ico",
+    "dist:portable": "electron-builder --win portable -c.extraMetadata.detectIdleRole=client -c.appId=com.detectidle.client -c.productName=\"Detect Idle Client\" -c.directories.output=dist/portable-client -c.win.icon=src/assets/icon-client.ico && electron-builder --win portable -c.extraMetadata.detectIdleRole=freelancer -c.appId=com.detectidle.freelancer -c.productName=\"Detect Idle Freelancer\" -c.directories.output=dist/portable-freelancer -c.win.icon=src/assets/icon-freelancer.ico",
     "icons": "electron scripts/make-icons.js"
   },
   "dependencies": {

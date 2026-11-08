@@ -1,6 +1,8 @@
 // Generates the app icons (.ico for Windows + .png) from SVG.
 // Run with Electron:  npx electron scripts/make-icons.js
-// Output: build/icon-client.ico, build/icon-freelancer.ico, src/assets/icon-*.{ico,png}
+// Output: src/assets/icon-{client,freelancer}.{ico,png}
+//   .ico -> exe/installer icon (package.json) + window/tray icon (main.js)
+//   .png -> logo in the app header (renderer.js)
 
 const { app, BrowserWindow } = require('electron');
 const fs = require('fs');
@@ -82,9 +84,7 @@ function buildIco(pngs) {
 
 app.whenReady().then(async () => {
   const root = path.join(__dirname, '..');
-  const buildDir = path.join(root, 'build');
   const assetDir = path.join(root, 'src', 'assets');
-  fs.mkdirSync(buildDir, { recursive: true });
   fs.mkdirSync(assetDir, { recursive: true });
 
   const win = new BrowserWindow({ show: false });
@@ -110,7 +110,6 @@ app.whenReady().then(async () => {
       pngs.push({ size, buf: Buffer.from(dataUrl.split(',')[1], 'base64') });
     }
     const ico = buildIco(pngs);
-    fs.writeFileSync(path.join(buildDir, `icon-${name}.ico`), ico);
     fs.writeFileSync(path.join(assetDir, `icon-${name}.ico`), ico);
     fs.writeFileSync(path.join(assetDir, `icon-${name}.png`), pngs[0].buf);
     console.log(`icon-${name}: ${SIZES.join(', ')} px`);
