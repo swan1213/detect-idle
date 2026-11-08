@@ -167,4 +167,4 @@ function startAutoUpdate({ role, onStatus = () => {}, beforeRestart = () => {}, 
   setInterval(check, CHECK_EVERY_MS);
 }
 
-module.exports = { startAutoUpdate, isNewer };
+module.exports = { startAutoUpdate };

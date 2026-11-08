@@ -256,7 +256,6 @@ details .field { margin-top: 8px; }
 .badge.idle { color: #fff; background: var(--danger); }
 .badge.idle .bdot { animation: blink .6s infinite; }
 .badge.offline { color: var(--warning); background: var(--warning-soft); }
-.badge.not-working { color: var(--muted); background: var(--neutral-soft); }
 .fval { font: 600 14px var(--font-display); font-variant-numeric: tabular-nums; }
 .fremove { margin-left: 2px; }
 .bar { height: 3px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin-top: 7px; }
@@ -268,7 +267,7 @@ details .field { margin-top: 8px; }
 .frow.is-idle .fval { color: var(--danger); }
 .frow.is-idle::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, var(--danger-soft), transparent 70%); }
 .frow.is-offline { border-color: rgba(245, 158, 11, 0.5); }
-.frow.is-not-working { opacity: 0.7; }
+.frow.is-paused { opacity: 0.7; }
 .shake { animation: shake .6s cubic-bezier(.36, .07, .19, .97) both, dangerGlow 1.2s ease-in-out .6s infinite !important; }
 
 .empty { text-align: center; padding: 20px 14px; margin-bottom: 18px; border: 1.5px dashed var(--border); border-radius: var(--radius); color: var(--muted); font-size: 11.5px; }

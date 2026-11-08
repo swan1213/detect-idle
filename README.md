@@ -46,7 +46,7 @@ cd app
 npm run dist
 ```
 
-Output in `app/dist/release/`:
+Output in `release/` (temporary build folders are removed automatically):
 
 - `Detect-Idle-Client-Setup-<version>.exe` and `Detect-Idle-Freelancer-Setup-<version>.exe` (installers)
 - `Detect-Idle-Client-Portable.exe` and `Detect-Idle-Freelancer-Portable.exe` (no install needed)
@@ -67,4 +67,4 @@ Installed and portable apps check [GitHub Releases](https://github.com/swan1213/
    npm run release
    ```
 
-This builds all four apps and creates the GitHub Release `v<version>` with every file from `app/dist/release/`. All running apps pick it up within about 4 hours, or at their next start.
+This builds all four apps and creates the GitHub Release `v<version>` with every file from `release/`. All running apps pick it up within about 4 hours, or at their next start.

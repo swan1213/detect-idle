@@ -1,10 +1,10 @@
 // Builds the Client and Freelancer apps (installer + portable) with auto-update settings.
 //
-//   node scripts/build.js            -> build everything into dist/
+//   node scripts/build.js            -> build everything into ../release/
 //   node scripts/build.js --release  -> build, then publish a GitHub Release (needs `gh auth login`)
-//   node scripts/build.js --only=client:nsis   -> build just one (for testing)
+//   node scripts/build.js --only=client:nsis   -> build just one into dist/release/ (testing)
 //
-// Output in dist/release/ (exactly what gets uploaded to the GitHub Release):
+// Output in release/ at the repo root (exactly what gets uploaded to the GitHub Release):
 //   Detect-Idle-Client-Setup-<ver>.exe (+ .blockmap), client.yml           <- installed Client updates
 //   Detect-Idle-Freelancer-Setup-<ver>.exe (+ .blockmap), freelancer.yml   <- installed Freelancer updates
 //   Detect-Idle-Client-Portable.exe, portable-client.json                  <- portable Client updates
@@ -24,8 +24,10 @@ const APPS = {
   client: { productName: 'Detect Idle Client', file: 'Detect-Idle-Client' },
   freelancer: { productName: 'Detect Idle Freelancer', file: 'Detect-Idle-Freelancer' },
 };
-const OUT = path.join(ROOT, 'dist');
-const RELEASE_DIR = path.join(OUT, 'release');
+const OUT = path.join(ROOT, 'dist'); // temporary build folders, deleted after a full build
+// --only=freelancer:portable (testing) builds just one of the four, into dist/release/.
+const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7);
+const RELEASE_DIR = ONLY ? path.join(OUT, 'release') : path.join(ROOT, '..', 'release');
 
 function config(role, target) {
   const a = APPS[role];
@@ -48,14 +50,13 @@ const sha512 = file => crypto.createHash('sha512').update(fs.readFileSync(file))
 
 async function main() {
   fs.rmSync(OUT, { recursive: true, force: true });
+  fs.rmSync(RELEASE_DIR, { recursive: true, force: true });
   fs.mkdirSync(RELEASE_DIR, { recursive: true });
   const files = [];
 
-  // --only=freelancer:portable (testing) builds just one of the four.
-  const only = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7);
   for (const role of Object.keys(APPS)) {
     for (const target of ['nsis', 'portable']) {
-      if (only && only !== `${role}:${target}`) continue;
+      if (ONLY && ONLY !== `${role}:${target}`) continue;
       console.log(`\n=== ${APPS[role].productName} (${target}) v${VERSION} ===`);
       await builder.build({
         targets: builder.Platform.WINDOWS.createTarget(target, builder.Arch.x64),
@@ -83,6 +84,7 @@ async function main() {
       }
     }
   }
+  if (!ONLY) fs.rmSync(OUT, { recursive: true, force: true }); // drop ~1.5 GB of intermediate build folders
   console.log(`\nRelease files in ${RELEASE_DIR}:\n  ${files.join('\n  ')}`);
 
   if (process.argv.includes('--release')) {

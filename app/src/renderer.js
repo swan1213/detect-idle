@@ -290,7 +290,7 @@ function renderClient(s) {
 
     el.classList.toggle('is-idle', f.status === 'idle' || f.status === 'asleep');
     el.classList.toggle('is-offline', f.status === 'offline');
-    el.classList.toggle('is-not-working', f.status === 'paused');
+    el.classList.toggle('is-paused', f.status === 'paused');
     const badge = el.querySelector('.badge');
     badge.className = 'badge ' + f.status;
     badge.querySelector('.btext').textContent = STATUS_LABEL[f.status] || f.status;

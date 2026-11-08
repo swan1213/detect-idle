@@ -85,4 +85,4 @@ class ActivityTracker {
   confirmPresence() { this.real(this.now()); }
 }
 
-module.exports = { ActivityTracker, HELD_KEY_MS, MOUSE_RADIUS };
+module.exports = { ActivityTracker };
