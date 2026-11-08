@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>Detect Idle</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <img id="logo" class="logo-img" alt="">
+      <div>
+        <div class="brand-name">Detect Idle</div>
+        <div class="brand-sub" id="roleLabel"></div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div id="conn" class="conn"><span class="dot"></span><span id="connText">Starting...</span></div>
+      <div class="win-btns">
+        <button id="minBtn" class="win-btn" title="Minimize">
+          <svg viewBox="0 0 12 12"><path d="M2 6.5h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <button id="closeBtn" class="win-btn win-close" title="Close (keeps running in the tray)">
+          <svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="error" class="error-bar hidden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+      <span id="errorText"></span>
+    </div>
+
+    <!-- ============ Freelancer: first run ============ -->
+    <section id="setup" class="hidden">
+      <form id="setupForm" class="card setup-card">
+        <div class="setup-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+        </div>
+        <h2>Join a project</h2>
+        <p class="muted">Enter the project code from your client. Every client in the project will be connected automatically.</p>
+        <label class="field"><span>Your name</span><input id="name" maxlength="40" placeholder="e.g. Alice Johnson" autocomplete="off"></label>
+        <label class="field"><span>Project code</span><input id="teamCode" maxlength="6" class="code-input" placeholder="------" autocomplete="off"></label>
+        <label class="field"><span>Project name <span class="muted">(optional)</span></span><input id="projectLabel" maxlength="40" placeholder="e.g. Website redesign" autocomplete="off"></label>
+        <details>
+          <summary>Advanced: client PC address</summary>
+          <label class="field"><span>Client PC address <span class="muted">(only if not found automatically)</span></span>
+            <input id="clientAddress" placeholder="e.g. 192.168.1.20" autocomplete="off">
+          </label>
+        </details>
+        <p id="setupError" class="form-error hidden"></p>
+        <button type="submit" class="btn btn-primary btn-lg btn-block">Join project</button>
+      </form>
+    </section>
+
+    <!-- ============ Freelancer: projects ============ -->
+    <section id="freelancer" class="hidden">
+      <div id="idleHero" class="idle-hero card">
+        <div id="ringWrap" class="ring-wrap ring-sm">
+          <svg class="ring" viewBox="0 0 200 200">
+            <circle class="ring-bg" cx="100" cy="100" r="88"/>
+            <circle id="ringFg" class="ring-fg" cx="100" cy="100" r="88"/>
+          </svg>
+          <div class="ring-center"><div id="fIdle" class="ring-value">0:00</div></div>
+        </div>
+        <div class="hero-text">
+          <div class="label">Idle now</div>
+          <div id="heroTitle" class="hero-title">Not monitored</div>
+          <div id="heroSub" class="hero-sub"></div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h3>My projects</h3>
+        <button id="addToggle" class="btn btn-ghost btn-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Join project
+        </button>
+      </div>
+
+      <form id="addForm" class="card add-form hidden">
+        <div class="add-row">
+          <label class="field"><span>Project code</span><input id="addCode" maxlength="6" class="code-input sm" placeholder="------" autocomplete="off"></label>
+          <label class="field"><span>Project name <span class="muted">(optional)</span></span><input id="addLabel" maxlength="40" placeholder="e.g. Website redesign" autocomplete="off"></label>
+        </div>
+        <details>
+          <summary>Advanced: client PC address</summary>
+          <label class="field"><span>Client PC address</span><input id="addAddress" placeholder="e.g. 192.168.1.20" autocomplete="off"></label>
+        </details>
+        <p id="addError" class="form-error hidden"></p>
+        <div class="add-actions">
+          <button type="button" id="addCancel" class="btn btn-sm">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Join</button>
+        </div>
+      </form>
+
+      <div id="projectList" class="list"></div>
+      <div id="noProjects" class="empty hidden">
+        <b>No projects yet</b>
+        Click <b class="inline">Join project</b> and enter the code from your client.
+      </div>
+
+      <p class="hint center-hint">Your clients decide when monitoring is on. Only keyboard and mouse activity is checked; nothing you type is recorded.</p>
+      <div id="fInfo" class="info-strip"></div>
+    </section>
+
+    <!-- ============ Client dashboard ============ -->
+    <section id="client" class="hidden">
+      <div id="dangerBanner" class="danger-banner hidden">
+        <div class="danger-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        </div>
+        <div>
+          <div class="danger-title" id="dangerTitle">Idle alert</div>
+          <div class="danger-text" id="dangerText"></div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="card">
+          <div class="label">Project code</div>
+          <div class="team-code-row">
+            <div id="cTeam" class="team-code">------</div>
+            <button id="copyBtn" class="btn btn-ghost btn-sm" title="Copy project code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span id="copyText">Copy</span>
+            </button>
+          </div>
+          <button id="settingsToggle" class="btn btn-ghost btn-sm settings-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+            Project settings
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="label">My idle limit</div>
+          <div class="stepper">
+            <button id="minusBtn" class="btn btn-icon" title="Decrease">−</button>
+            <input id="limit" type="number" min="1" max="480">
+            <button id="plusBtn" class="btn btn-icon" title="Increase">+</button>
+            <span class="unit">min</span>
+          </div>
+          <div id="savedNote" class="saved">✓ Saved</div>
+        </div>
+      </div>
+
+      <!-- project settings panel -->
+      <div id="settingsPanel" class="card settings-panel hidden">
+        <label class="field"><span>Your name <span class="muted">(shown to freelancers)</span></span>
+          <input id="clientNameInput" maxlength="40" autocomplete="off">
+        </label>
+        <div class="field">
+          <span>Join another client's project</span>
+          <div class="join-row">
+            <input id="joinCode" maxlength="6" class="code-input sm" placeholder="------" autocomplete="off">
+            <button id="joinBtn" class="btn btn-primary btn-sm">Join</button>
+          </div>
+          <p id="joinError" class="form-error hidden"></p>
+        </div>
+        <div class="settings-foot">
+          <button id="newProjectBtn" class="btn btn-ghost btn-sm">Start a new project code</button>
+          <button id="settingsDone" class="btn btn-sm">Done</button>
+        </div>
+        <div id="cAddr" class="ip-line"></div>
+      </div>
+
+      <div class="section-head">
+        <h3>Freelancers</h3>
+        <div class="pills">
+          <span class="pill-count pc-active" title="Active"><span class="bdot"></span><span id="nActive">0</span></span>
+          <span id="idleCount" class="pill-count pc-idle" title="Idle"><span class="bdot"></span><span id="nIdle">0</span></span>
+          <span class="pill-count pc-offline" title="Offline"><span class="bdot"></span><span id="nOffline">0</span></span>
+        </div>
+      </div>
+      <div id="grid" class="list"></div>
+      <div id="empty" class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+        <b>No freelancers connected yet</b>
+        Share your project code <span id="emptyCode" class="team-inline"></span> with your freelancers.
+      </div>
+
+      <div class="section-head">
+        <h3>Activity</h3>
+        <button id="testBtn" class="btn btn-ghost btn-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>
+          Test alert
+        </button>
+      </div>
+      <div class="card timeline-card">
+        <ul id="alerts" class="timeline"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer><button id="resetBtn" class="btn btn-ghost btn-sm hidden">Sign out</button></footer>
+</div>
+<script src="renderer.js"></script>
+</body>
+</html>

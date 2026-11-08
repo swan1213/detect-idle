@@ -1,0 +1,12 @@
+# dependencies
+node_modules/
+
+# build output (installers are ~80 MB each; publish them as GitHub Release assets instead)
+app/dist/
+release/
+
+# local/OS files
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>Alert</title>
+  <link rel="stylesheet" href="alert.css">
+</head>
+<body>
+  <div id="card" class="pop">
+    <div class="sweep"></div>
+    <div class="icon">
+      <span class="ring r1"></span><span class="ring r2"></span>
+      <svg id="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></svg>
+    </div>
+    <div class="body">
+      <div class="head">
+        <span id="kind" class="kind"></span>
+        <span id="time" class="time"></span>
+      </div>
+      <div id="name" class="name"></div>
+      <div id="text" class="text"></div>
+      <div class="actions">
+        <button id="view" class="b b-solid">View dashboard</button>
+        <button id="mute" class="b hidden" title="Stop the alarm sound">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m23 9-6 6M17 9l6 6"/></svg>
+          Mute
+        </button>
+        <button id="dismiss" class="b">Dismiss</button>
+      </div>
+    </div>
+    <button id="close" class="x" title="Dismiss">×</button>
+    <div id="timer" class="timer"></div>
+  </div>
+  <script src="alert.js"></script>
+</body>
+</html>
